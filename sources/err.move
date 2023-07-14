@@ -1,6 +1,10 @@
 module releap_social::error {
     const ERR_BASE: u64 = 0x72656c65617000;
 
+    public fun deprecated(): u64 {
+        return ERR_BASE + 99
+    }
+
     public fun not_owner(): u64 {
         return ERR_BASE + 100
     }

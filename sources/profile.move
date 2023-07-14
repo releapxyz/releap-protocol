@@ -50,6 +50,13 @@ module releap_social::profile {
         follower_following_count: u64,
     }
 
+    struct UnfollowEvent has copy, drop {
+        follower: ID,
+        followee: ID,
+        followee_follower_count: u64,
+        follower_following_count: u64,
+    }
+
     fun followers_key(): String {
         string::utf8(b"followers")
     }
@@ -292,6 +299,13 @@ module releap_social::profile {
 
             following_profile.followers_count = following_profile.followers_count - 1;
             profile.followings_count = profile.followings_count - 1;
+
+            event::emit(UnfollowEvent {
+                followee: object::id(following_profile),
+                follower: object::id(profile),
+                followee_follower_count: following_profile.followers_count,
+                follower_following_count: profile.followings_count
+            });
         }
     }
 

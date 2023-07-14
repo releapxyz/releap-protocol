@@ -62,6 +62,13 @@ module releap_social::post {
         like_count: u64,
     }
 
+    struct UnlikePostEvent has copy, drop {
+        post_author: ID,
+        post_id: ID,
+        profile: ID,
+        like_count: u64,
+    }
+
     fun comments_key(): String {
         string::utf8(b"comments")
     }
@@ -88,10 +95,12 @@ module releap_social::post {
             like_count: 0
         };
 
+        let post_id = object::id(&post);
+
         let post_owner_cap = PostOwnerCap {
             id: object::new(ctx),
             seq: counter,
-            post: object::id(&post),
+            post: post_id,
             image_url: image_url_converted,
             content: content,
         };
@@ -101,7 +110,7 @@ module releap_social::post {
         df::add(&mut post.id, liked_set_key(), vec_set::empty<ID>());
 
         event::emit(CreatePostEvent {
-            post_id: object::id(&post),
+            post_id: post_id,
             content: post.content,
             image_url: post.image_url,
             author: profile_id,
@@ -124,17 +133,19 @@ module releap_social::post {
             like_count: 0
         };
 
+        let comment_id = object::id(&comment);
+
         let comment_owner_cap = PostOwnerCap {
             id: object::new(ctx),
             seq: counter,
-            post: object::id(&comment),
+            post: comment_id,
             image_url: option::none(),
             content: content,
         };
 
         post.comment_count = post.comment_count + 1;
         let comments: &mut vector<ID> = df::borrow_mut(&mut post.id, comments_key());
-        vector::push_back(comments, object::id(&comment));
+        vector::push_back(comments, comment_id);
 
         // init empty comment list
         df::add(&mut comment.id, comments_key(), vector::empty<ID>());
@@ -145,7 +156,7 @@ module releap_social::post {
             comment_author: author_profile_id,
             post_id: object::id(post),
             post_author: post.author,
-            content: post.content,
+            content: comment.content,
             image_url: post.image_url,
         });
 
@@ -172,6 +183,13 @@ module releap_social::post {
         if (vec_set::contains(liked, &profile_id)) {
             vec_set::remove(liked, &profile_id);
             post.like_count = post.like_count - 1;
+
+            event::emit(UnlikePostEvent {
+                post_id: object::id(post),
+                post_author: post.author,
+                profile: profile_id,
+                like_count: post.like_count,
+            });
         }
     }
 
